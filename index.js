@@ -22,7 +22,7 @@ const offerRoutes = require("./routes/offer");
 app.use(userRoutes);
 app.use(offerRoutes);
 
-app.get("/", () => {
+app.get("/", (req, res) => {
   try {
     return res.status(200).json({ message: "Welcome!" });
   } catch (error) {
