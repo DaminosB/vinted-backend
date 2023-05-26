@@ -25,13 +25,10 @@ router.post(
         brand,
         size,
         color,
-        token,
+        user,
       } = req.body;
 
-      // Identification du compte par le token
-      const foundUser = await User.findOne({ token });
-
-      if (foundUser) {
+      if (user) {
         if (
           product_name &&
           product_description &&
@@ -76,7 +73,7 @@ router.post(
             product_description,
             product_price,
             product_details,
-            owner: foundUser,
+            owner: user,
           });
 
           if (req.files) {
@@ -92,7 +89,6 @@ router.post(
                   });
                 });
                 const result = await Promise.all(arrayOfPromises);
-                console.log(result);
                 for (let i = 0; i < result.length; i++) {
                   arrayOfFilesUrl.push({
                     secure_url: result[i].secure_url,
@@ -161,7 +157,14 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       size,
       color,
       pictureToDelete,
+      user,
     } = req.body;
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "You must be connected to edit an offer" });
+    }
 
     if (product_description.length > 500) {
       return res
@@ -272,7 +275,6 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
 
       if (pictureToDelete) {
         if (numberOfPictures > 1) {
-          console.log(offerToEdit.product_image);
           const indexToDelete = offerToEdit.product_image.findIndex(
             (element) => element.public_id === pictureToDelete
           );
@@ -312,29 +314,26 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
 
 router.delete("/offer/delete", isAuthenticated, async (req, res) => {
   try {
-    const user = await User.findOne({ token: req.body.token });
-    const offerToDelete = await Offer.findById(req.body.offerToDelete);
+    const { user, offerToDeleteID } = req.body;
+    const offerToDelete = await Offer.findById(offerToDeleteID);
 
-    const DeletingUser = user._id.toString();
+    const deletingUser = user._id.toString();
     const offerOwner = offerToDelete.owner.toString();
 
-    if (DeletingUser === offerOwner) {
+    if (deletingUser === offerOwner) {
       for (let i = 0; i < offerToDelete.product_image.length; i++) {
         const pictureToDelete = offerToDelete.product_image[i].public_id;
         await cloudinary.uploader.destroy(pictureToDelete);
       }
-      await cloudinary.api.delete_folder(
-        `vinted/offers/${req.body.offerToDelete}`
-      );
+      await cloudinary.api.delete_folder(`vinted/offers/${offerToDeleteID}`);
 
-      await Offer.findByIdAndDelete(req.body.offerToDelete);
+      await Offer.findByIdAndDelete(offerToDeleteID);
+      return res.status(200).json({ message: "Offer successfully deleted" });
     } else {
       return res
         .status(400)
         .json({ message: "You are not allowed to delete this offer" });
     }
-
-    return res.status(200).json({ message: "Offer successfully deleted" });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
