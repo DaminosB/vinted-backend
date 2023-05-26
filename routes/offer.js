@@ -86,15 +86,17 @@ router.post(
             if (picturesToUpload.length) {
               // Si plusieurs images envoyées
               if (picturesToUpload.length <= 20) {
-                for (let i = 0; i < picturesToUpload.length; i++) {
-                  const picture = picturesToUpload[i];
-                  const result = await cloudinary.uploader.upload(
-                    convertToBase64(picture),
-                    { folder: `vinted/offers/${newOffer._id}` }
-                  );
+                const arrayOfPromises = picturesToUpload.map((picture) => {
+                  return cloudinary.uploader.upload(convertToBase64(picture), {
+                    folder: `vinted/offers/${newOffer._id}`,
+                  });
+                });
+                const result = await Promise.all(arrayOfPromises);
+                console.log(result);
+                for (let i = 0; i < result.length; i++) {
                   arrayOfFilesUrl.push({
-                    secure_url: result.secure_url,
-                    public_id: result.public_id,
+                    secure_url: result[i].secure_url,
+                    public_id: result[i].public_id,
                   });
                 }
               } else {
@@ -214,57 +216,55 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       let numberOfPictures = offerToEdit.product_image.length;
 
       if (req.files) {
-        if (numberOfPictures < 4) {
-          // Enregistrement des fichiers images sur Cloudinary
-          const arrayOfFilesUrl = [];
-          const picturesToUpload = req.files.pictures;
-          if (picturesToUpload.length) {
-            // Si plusieurs images envoyées
-            if (picturesToUpload.length + numberOfPictures <= 4) {
-              try {
-                for (let i = 0; i < picturesToUpload.length; i++) {
-                  const picture = picturesToUpload[i];
-                  const result = await cloudinary.uploader.upload(
-                    convertToBase64(picture),
-                    { folder: `vinted/offers/${offerToEdit._id}` }
-                  );
-                  arrayOfFilesUrl.push({
-                    secure_url: result.secure_url,
-                    public_id: result.public_id,
-                  });
-                }
-              } catch (error) {
-                return res.status(500).json({ message: error.message });
-              }
-            } else {
-              res
-                .status(400)
-                .json({ message: "Cannot send more than 20 pictures" });
-            }
-          } else {
-            // Si une seule image envoyée
+        // Enregistrement des fichiers images sur Cloudinary
+        const arrayOfFilesUrl = [];
+        const picturesToUpload = req.files.pictures;
+        if (picturesToUpload.length) {
+          // Si plusieurs images envoyées
+          if (picturesToUpload.length + numberOfPictures <= 20) {
             try {
-              if (numberOfPictures < 20) {
+              for (let i = 0; i < picturesToUpload.length; i++) {
+                const picture = picturesToUpload[i];
                 const result = await cloudinary.uploader.upload(
-                  convertToBase64(picturesToUpload),
+                  convertToBase64(picture),
                   { folder: `vinted/offers/${offerToEdit._id}` }
                 );
                 arrayOfFilesUrl.push({
                   secure_url: result.secure_url,
                   public_id: result.public_id,
                 });
-              } else {
-                return res
-                  .status(400)
-                  .json({ message: "Cannot send more than 20 pictures" });
               }
             } catch (error) {
               return res.status(500).json({ message: error.message });
             }
+          } else {
+            res
+              .status(400)
+              .json({ message: "Cannot send more than 20 pictures" });
           }
-          for (let i = 0; i < arrayOfFilesUrl.length; i++) {
-            offerToEdit.product_image.push(arrayOfFilesUrl[i]);
+        } else {
+          // Si une seule image envoyée
+          try {
+            if (numberOfPictures < 20) {
+              const result = await cloudinary.uploader.upload(
+                convertToBase64(picturesToUpload),
+                { folder: `vinted/offers/${offerToEdit._id}` }
+              );
+              arrayOfFilesUrl.push({
+                secure_url: result.secure_url,
+                public_id: result.public_id,
+              });
+            } else {
+              return res
+                .status(400)
+                .json({ message: "Cannot send more than 20 pictures" });
+            }
+          } catch (error) {
+            return res.status(500).json({ message: error.message });
           }
+        }
+        for (let i = 0; i < arrayOfFilesUrl.length; i++) {
+          offerToEdit.product_image.push(arrayOfFilesUrl[i]);
         }
       }
 
@@ -272,15 +272,13 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
 
       if (pictureToDelete) {
         if (numberOfPictures > 1) {
-          // On vérifie que l'annonce comporte toujours au moins 1 image
-          const PicArr = [];
-          for (let i = 0; i < numberOfPictures; i++) {
-            if (offerToEdit.product_image[i].public_id !== pictureToDelete) {
-              PicArr.push(offerToEdit.product_image[i]);
-            }
-          }
+          console.log(offerToEdit.product_image);
+          const indexToDelete = offerToEdit.product_image.findIndex(
+            (element) => element.public_id === pictureToDelete
+          );
 
-          offerToEdit.product_image = PicArr;
+          offerToEdit.product_image.splice(indexToDelete, 1);
+
           await cloudinary.uploader.destroy(pictureToDelete);
         } else {
           return res
