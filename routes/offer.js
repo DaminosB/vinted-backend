@@ -201,6 +201,8 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       }
     }
 
+    console.log(0, offerToEdit.product_details[0].ETAT);
+
     // Modification des product_details
     if (condition) {
       offerToEdit.product_details[0].ETAT = condition;
@@ -221,6 +223,8 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
     if (city) {
       offerToEdit.product_details[4].EMPLACEMENT = city;
     }
+    // console.log("condition à la fin", condition);
+    console.log(1, offerToEdit.product_details[0].ETAT);
 
     // Upload de nouvelles photos
     if (req.files) {
@@ -269,10 +273,12 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
         offerToEdit.product_image.push(arrayOfFilesUrl[i]);
       }
     }
+    console.log(2, offerToEdit.product_details[0].ETAT);
 
     // Mise à jour du nombre de photos dans le tableau product_image
     numberOfPictures = offerToEdit.product_image.length;
 
+    console.log(3, offerToEdit.product_details[0].ETAT);
     // Suppression de photos
     if (typeof pictureToDelete === "string") {
       if (numberOfPictures > 1) {
@@ -303,7 +309,10 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       }
     }
 
+    console.log(4, offerToEdit.product_details[0].ETAT);
     offerToEdit.save();
+
+    console.log(5, offerToEdit.product_details[0].ETAT);
 
     return res.status(200).json({
       _id: offerToEdit._id,
