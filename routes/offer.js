@@ -28,114 +28,111 @@ router.post(
         user,
       } = req.body;
 
-      if (user) {
-        if (
-          product_name &&
-          product_description &&
-          product_price &&
-          condition &&
-          brand &&
-          size &&
-          color &&
-          city
-        ) {
-          if (product_description.length >= 500) {
-            return res
-              .status(400)
-              .json({ message: "Description must be under 500 characters" });
-          }
+      // Vérification de la présence des oaramètres
+      if (
+        !product_name ||
+        !product_description ||
+        !product_price ||
+        !condition ||
+        !brand ||
+        !size ||
+        !color ||
+        !city ||
+        !req.files
+      ) {
+        return res.status(400).json({ message: "Missing parameters" });
+      }
 
-          if (product_name.length >= 50) {
-            return res
-              .status(400)
-              .json({ message: "Product name must be under 50 characters" });
-          }
+      // Vérification de la validité des paramètres
+      if (product_description.length >= 500) {
+        return res
+          .status(400)
+          .json({ message: "Description must be under 500 characters" });
+      }
 
-          if (product_price > 100000) {
-            return res
-              .status(400)
-              .json({ message: "Product price must be under 100000" });
-          }
+      if (product_name.length >= 50) {
+        return res
+          .status(400)
+          .json({ message: "Product name must be under 50 characters" });
+      }
 
-          // Déclaration du tableau product_details
-          const product_details = [];
-          product_details.push(
-            { ETAT: condition },
-            { MARQUE: brand },
-            { TAILLE: size },
-            { COULEUR: color },
-            { EMPLACEMENT: city }
-          );
+      if (product_price > 100000) {
+        return res
+          .status(400)
+          .json({ message: "Product price must be under 100000" });
+      }
 
-          // Déclaration de la nouvelle offre
-          const newOffer = new Offer({
-            product_name,
-            product_description,
-            product_price,
-            product_details,
-            owner: user,
-          });
+      // Déclaration du tableau product_details
+      const product_details = [];
+      product_details.push(
+        { ETAT: condition },
+        { MARQUE: brand },
+        { TAILLE: size },
+        { COULEUR: color },
+        { EMPLACEMENT: city }
+      );
 
-          if (req.files) {
-            // Enregistrement des fichiers images sur Cloudinary
-            const arrayOfFilesUrl = [];
-            const picturesToUpload = req.files.pictures;
-            if (picturesToUpload.length) {
-              // Si plusieurs images envoyées
-              if (picturesToUpload.length <= 20) {
-                const arrayOfPromises = picturesToUpload.map((picture) => {
-                  return cloudinary.uploader.upload(convertToBase64(picture), {
-                    folder: `vinted/offers/${newOffer._id}`,
-                  });
-                });
-                const result = await Promise.all(arrayOfPromises);
-                for (let i = 0; i < result.length; i++) {
-                  arrayOfFilesUrl.push({
-                    secure_url: result[i].secure_url,
-                    public_id: result[i].public_id,
-                  });
-                }
-              } else {
-                res
-                  .status(400)
-                  .json({ message: "Cannot send more than 20 pictures" });
-              }
-            } else {
-              // Si une seule image envoyée
-              const result = await cloudinary.uploader.upload(
-                convertToBase64(picturesToUpload),
-                { folder: `vinted/offers/${newOffer._id}` }
-              );
-              arrayOfFilesUrl.push({
-                secure_url: result.secure_url,
-                public_id: result.public_id,
-              });
-            }
+      // Déclaration de la nouvelle offre
+      const newOffer = new Offer({
+        product_name,
+        product_description,
+        product_price,
+        product_details,
+        owner: user,
+      });
 
-            // Déclaration de l'adresse des images uploadées
-            newOffer.product_image = arrayOfFilesUrl;
-
-            // Enregistrement de la nouvelle offre
-            await newOffer.save();
-
-            return res.status(201).json({
-              _id: newOffer._id,
-              product_name: newOffer.product_name,
-              product_price: newOffer.product_price,
-              product_details: newOffer.product_details,
-              owner: {
-                account: newOffer.owner.account,
-                _id: newOffer.owner._id,
-              },
-              product_image: newOffer.product_image,
+      // Enregistrement des fichiers images sur Cloudinary
+      const arrayOfFilesUrl = [];
+      const picturesToUpload = req.files.pictures;
+      if (picturesToUpload.length) {
+        // Si plusieurs images envoyées
+        if (picturesToUpload.length <= 20) {
+          const arrayOfPromises = picturesToUpload.map((picture) => {
+            return cloudinary.uploader.upload(convertToBase64(picture), {
+              folder: `vinted/offers/${newOffer._id}`,
             });
-          } else return res.status(400).json({ message: "Missing picture" });
+          });
+          const result = await Promise.all(arrayOfPromises);
+          for (let i = 0; i < result.length; i++) {
+            arrayOfFilesUrl.push({
+              secure_url: result[i].secure_url,
+              public_id: result[i].public_id,
+            });
+          }
         } else {
-          return res.status(400).json({ message: "Missing parameters" });
+          res
+            .status(400)
+            .json({ message: "Cannot send more than 20 pictures" });
         }
       } else {
-        return res.status(401).json({ message: "Authentication error" });
+        // Si une seule image envoyée
+        const result = await cloudinary.uploader.upload(
+          convertToBase64(picturesToUpload),
+          { folder: `vinted/offers/${newOffer._id}` }
+        );
+        arrayOfFilesUrl.push({
+          secure_url: result.secure_url,
+          public_id: result.public_id,
+        });
       }
+
+      // Déclaration de l'adresse des images uploadées
+      newOffer.product_image = arrayOfFilesUrl;
+
+      // Enregistrement de la nouvelle offre
+      await newOffer.save();
+
+      return res.status(201).json({
+        _id: newOffer._id,
+        product_name: newOffer.product_name,
+        product_price: newOffer.product_price,
+        product_details: newOffer.product_details,
+        owner: {
+          account: newOffer.owner.account,
+          _id: newOffer.owner._id,
+        },
+        product_image: newOffer.product_image,
+      });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -159,151 +156,157 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       user,
     } = req.body;
 
-    if (!user) {
-      return res
-        .status(400)
-        .json({ message: "You must be connected to edit an offer" });
-    }
-
-    if (product_description.length > 500) {
-      return res
-        .status(400)
-        .json({ message: "Description must be under 500 characters" });
-    }
-
-    if (product_name.length > 50) {
-      return res
-        .status(400)
-        .json({ message: "Product name must be under 50 characters" });
-    }
-
-    if (product_price > 100000) {
-      return res
-        .status(400)
-        .json({ message: "Product price must be under 100000" });
-    }
     const offerToEdit = await Offer.findById(offerID);
 
     const modifyingUser = user._id.toString();
     const offerOwner = offerToEdit.owner.toString();
 
-    if (modifyingUser === offerOwner) {
-      if (product_name) {
-        offerToEdit.product_name = product_name;
-      }
-      if (product_description) {
-        offerToEdit.product_description = product_description;
-      }
-      if (product_price) {
-        offerToEdit.product_price = product_price;
-      }
-      if (condition) {
-        offerToEdit.product_details[0].ETAT = condition;
-      }
-      if (brand) {
-        offerToEdit.product_details[1].MARQUE = brand;
-      }
-      if (size) {
-        offerToEdit.product_details[2].TAILLE = size;
-      }
-      if (color) {
-        offerToEdit.product_details[3].COULEUR = color;
-      }
-      if (city) {
-        offerToEdit.product_details[4].EMPLACEMENT = city;
-      }
-
-      let numberOfPictures = offerToEdit.product_image.length;
-
-      if (req.files) {
-        // Enregistrement des fichiers images sur Cloudinary
-        const arrayOfFilesUrl = [];
-        const picturesToUpload = req.files.pictures;
-        if (picturesToUpload.length) {
-          // Si plusieurs images envoyées
-          if (picturesToUpload.length + numberOfPictures <= 20) {
-            try {
-              for (let i = 0; i < picturesToUpload.length; i++) {
-                const picture = picturesToUpload[i];
-                const result = await cloudinary.uploader.upload(
-                  convertToBase64(picture),
-                  { folder: `vinted/offers/${offerToEdit._id}` }
-                );
-                arrayOfFilesUrl.push({
-                  secure_url: result.secure_url,
-                  public_id: result.public_id,
-                });
-              }
-            } catch (error) {
-              return res.status(500).json({ message: error.message });
-            }
-          } else {
-            res
-              .status(400)
-              .json({ message: "Cannot send more than 20 pictures" });
-          }
-        } else {
-          // Si une seule image envoyée
-          try {
-            if (numberOfPictures < 20) {
-              const result = await cloudinary.uploader.upload(
-                convertToBase64(picturesToUpload),
-                { folder: `vinted/offers/${offerToEdit._id}` }
-              );
-              arrayOfFilesUrl.push({
-                secure_url: result.secure_url,
-                public_id: result.public_id,
-              });
-            } else {
-              return res
-                .status(400)
-                .json({ message: "Cannot send more than 20 pictures" });
-            }
-          } catch (error) {
-            return res.status(500).json({ message: error.message });
-          }
-        }
-        for (let i = 0; i < arrayOfFilesUrl.length; i++) {
-          offerToEdit.product_image.push(arrayOfFilesUrl[i]);
-        }
-      }
-
-      numberOfPictures = offerToEdit.product_image.length;
-
-      if (pictureToDelete) {
-        if (numberOfPictures > 1) {
-          const indexToDelete = offerToEdit.product_image.findIndex(
-            (element) => element.public_id === pictureToDelete
-          );
-
-          offerToEdit.product_image.splice(indexToDelete, 1);
-
-          await cloudinary.uploader.destroy(pictureToDelete);
-        } else {
-          return res
-            .status(400)
-            .json({ message: "Cannot post an offer without picture" });
-        }
-      }
-
-      offerToEdit.save();
-
-      return res.status(201).json({
-        _id: offerToEdit._id,
-        product_name: offerToEdit.product_name,
-        product_price: offerToEdit.product_price,
-        product_details: offerToEdit.product_details,
-        owner: {
-          account: user.account,
-          _id: user._id,
-        },
-        product_image: offerToEdit.product_image,
-      });
-    } else {
+    if (modifyingUser !== offerOwner) {
       return res
         .status(400)
         .json({ message: "You are not allowed to edit this offer" });
     }
+
+    if (product_name) {
+      if (product_name.length <= 50) {
+        offerToEdit.product_name = product_name;
+      } else {
+        return res
+          .status(400)
+          .json({ message: "Product name must be under 50 characters" });
+      }
+    }
+
+    if (product_description) {
+      if (product_description.length <= 500) {
+        offerToEdit.product_description = product_description;
+      } else {
+        return res
+          .status(400)
+          .json({ message: "Description must be under 500 characters" });
+      }
+    }
+
+    if (product_price) {
+      if (product_price <= 100000) {
+        offerToEdit.product_price = product_price;
+      } else {
+        return res
+          .status(400)
+          .json({ message: "Product price must be under 100000" });
+      }
+    }
+
+    if (condition) {
+      offerToEdit.product_details[0].ETAT = condition;
+    }
+
+    if (brand) {
+      offerToEdit.product_details[1].MARQUE = brand;
+    }
+
+    if (size) {
+      offerToEdit.product_details[2].TAILLE = size;
+    }
+
+    if (color) {
+      offerToEdit.product_details[3].COULEUR = color;
+    }
+
+    if (city) {
+      offerToEdit.product_details[4].EMPLACEMENT = city;
+    }
+
+    if (req.files) {
+      let numberOfPictures = offerToEdit.product_image.length;
+      // Enregistrement des fichiers images sur Cloudinary
+      const arrayOfFilesUrl = [];
+      const picturesToUpload = req.files.pictures;
+      if (picturesToUpload.length) {
+        // Si plusieurs images envoyées
+        if (picturesToUpload.length + numberOfPictures <= 20) {
+          for (let i = 0; i < picturesToUpload.length; i++) {
+            const picture = picturesToUpload[i];
+            const result = await cloudinary.uploader.upload(
+              convertToBase64(picture),
+              { folder: `vinted/offers/${offerToEdit._id}` }
+            );
+            arrayOfFilesUrl.push({
+              secure_url: result.secure_url,
+              public_id: result.public_id,
+            });
+          }
+        } else {
+          res
+            .status(400)
+            .json({ message: "Cannot send more than 20 pictures" });
+        }
+      } else {
+        // Si une seule image envoyée
+        if (numberOfPictures < 20) {
+          const result = await cloudinary.uploader.upload(
+            convertToBase64(picturesToUpload),
+            { folder: `vinted/offers/${offerToEdit._id}` }
+          );
+          arrayOfFilesUrl.push({
+            secure_url: result.secure_url,
+            public_id: result.public_id,
+          });
+        } else {
+          return res
+            .status(400)
+            .json({ message: "Cannot send more than 20 pictures" });
+        }
+      }
+      for (let i = 0; i < arrayOfFilesUrl.length; i++) {
+        offerToEdit.product_image.push(arrayOfFilesUrl[i]);
+      }
+    }
+
+    numberOfPictures = offerToEdit.product_image.length;
+
+    if (typeof pictureToDelete === "string") {
+      if (numberOfPictures > 1) {
+        const indexToDelete = offerToEdit.product_image.findIndex(
+          (element) => element.public_id === pictureToDelete
+        );
+
+        offerToEdit.product_image.splice(indexToDelete, 1);
+
+        await cloudinary.uploader.destroy(pictureToDelete);
+      } else {
+        return res
+          .status(400)
+          .json({ message: "Cannot post an offer without picture" });
+      }
+    } else if (typeof pictureToDelete === "object") {
+      if (numberOfPictures - pictureToDelete.length >= 1) {
+        const arrayOfPromises = pictureToDelete.map((picture) => {
+          return cloudinary.uploader.destroy(picture);
+        });
+        await Promise.all(arrayOfPromises);
+        for (let i = 0; i < pictureToDelete.length; i++) {
+          const indexToDelete = offerToEdit.product_image.findIndex(
+            (element) => element.public_id === pictureToDelete[i]
+          );
+          offerToEdit.product_image.splice(indexToDelete, 1);
+        }
+      }
+    }
+
+    offerToEdit.save();
+
+    return res.status(200).json({
+      _id: offerToEdit._id,
+      product_name: offerToEdit.product_name,
+      product_price: offerToEdit.product_price,
+      product_details: offerToEdit.product_details,
+      owner: {
+        account: user.account,
+        _id: user._id,
+      },
+      product_image: offerToEdit.product_image,
+    });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
