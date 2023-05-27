@@ -146,7 +146,6 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
   try {
     // Destructuring de la requête
     const {
-      token,
       offerID,
       product_name,
       product_description,
@@ -183,11 +182,9 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
         .status(400)
         .json({ message: "Product price must be under 100000" });
     }
-
-    const foundUser = await User.findOne({ token });
     const offerToEdit = await Offer.findById(offerID);
 
-    const modifyingUser = foundUser._id.toString();
+    const modifyingUser = user._id.toString();
     const offerOwner = offerToEdit.owner.toString();
 
     if (modifyingUser === offerOwner) {
@@ -297,8 +294,8 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
         product_price: offerToEdit.product_price,
         product_details: offerToEdit.product_details,
         owner: {
-          account: foundUser.account,
-          _id: foundUser._id,
+          account: user.account,
+          _id: user._id,
         },
         product_image: offerToEdit.product_image,
       });

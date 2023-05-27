@@ -43,7 +43,7 @@ router.post("/user/signup", fileUpload(), async (req, res) => {
           try {
             const result = await cloudinary.uploader.upload(
               convertToBase64(req.files.avatar),
-              { folder: `vinted/${newUser._id}` }
+              { folder: `vinted/users/${newUser._id}` }
             );
 
             newUser.account.avatar.secure_url = result.secure_url;
