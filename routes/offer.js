@@ -28,7 +28,7 @@ router.post(
         user,
       } = req.body;
 
-      // Vérification de la présence des oaramètres
+      // Vérification de la présence des paramètres
       if (
         !product_name ||
         !product_description ||
@@ -156,6 +156,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       user,
     } = req.body;
 
+    // Vérification des autorisations de l'utilisateur
     const offerToEdit = await Offer.findById(offerID);
 
     const modifyingUser = user._id.toString();
@@ -167,6 +168,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
         .json({ message: "You are not allowed to edit this offer" });
     }
 
+    // Modification du nom
     if (product_name) {
       if (product_name.length <= 50) {
         offerToEdit.product_name = product_name;
@@ -177,6 +179,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       }
     }
 
+    // Modification de la description
     if (product_description) {
       if (product_description.length <= 500) {
         offerToEdit.product_description = product_description;
@@ -187,6 +190,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       }
     }
 
+    // Modification du prix
     if (product_price) {
       if (product_price <= 100000) {
         offerToEdit.product_price = product_price;
@@ -197,6 +201,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       }
     }
 
+    // Modification des product_details
     if (condition) {
       offerToEdit.product_details[0].ETAT = condition;
     }
@@ -217,6 +222,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       offerToEdit.product_details[4].EMPLACEMENT = city;
     }
 
+    // Upload de nouvelles photos
     if (req.files) {
       let numberOfPictures = offerToEdit.product_image.length;
       // Enregistrement des fichiers images sur Cloudinary
@@ -225,15 +231,16 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       if (picturesToUpload.length) {
         // Si plusieurs images envoyées
         if (picturesToUpload.length + numberOfPictures <= 20) {
-          for (let i = 0; i < picturesToUpload.length; i++) {
-            const picture = picturesToUpload[i];
-            const result = await cloudinary.uploader.upload(
-              convertToBase64(picture),
-              { folder: `vinted/offers/${offerToEdit._id}` }
-            );
+          const arrayOfPromises = picturesToUpload.map((picture) => {
+            return cloudinary.uploader.upload(convertToBase64(picture), {
+              folder: `vinted/offers/${offerToEdit._id}`,
+            });
+          });
+          const result = await Promise.all(arrayOfPromises);
+          for (let i = 0; i < result.length; i++) {
             arrayOfFilesUrl.push({
-              secure_url: result.secure_url,
-              public_id: result.public_id,
+              secure_url: result[i].secure_url,
+              public_id: result[i].public_id,
             });
           }
         } else {
@@ -263,8 +270,10 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
       }
     }
 
+    // Mise à jour du nombre de photos dans le tableau product_image
     numberOfPictures = offerToEdit.product_image.length;
 
+    // Suppression de photos
     if (typeof pictureToDelete === "string") {
       if (numberOfPictures > 1) {
         const indexToDelete = offerToEdit.product_image.findIndex(
