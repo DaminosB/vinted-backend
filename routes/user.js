@@ -22,57 +22,59 @@ router.post("/user/signup", fileUpload(), async (req, res) => {
     // Vérification de l'unicité de l'email
     const isAccountExist = await User.findOne({ email });
 
-    if (!isAccountExist) {
-      // Si l'email renseigné est unique, alors :
-      if (username && email && password && newsletter !== undefined) {
-        // Si tous les paramètres sont renseignés, alors :
-
-        const newUser = new User({
-          email,
-          account: {
-            username,
-          },
-          newsletter,
-          token,
-          hash,
-          salt,
-        });
-
-        if (req.files) {
-          // Enregistrement de l'avatar
-          try {
-            const result = await cloudinary.uploader.upload(
-              convertToBase64(req.files.avatar),
-              { folder: `vinted/users/${newUser._id}` }
-            );
-
-            newUser.account.avatar.secure_url = result.secure_url;
-            newUser.account.avatar.public_id = result.public_id;
-            console.log(result);
-          } catch (error) {
-            return res.status(500).json({ message: error.message });
-          }
-        } else {
-          // Si pas d'avatar, un avatar par défaut est affecté
-          newUser.account.avatar.secure_url =
-            "https://res.cloudinary.com/dwdykfhtf/image/upload/v1684566311/vinted/default_pictures/default-avatar.jpg";
-          newUser.account.avatar.public_id =
-            "vinted/default_pictures/default-avatar.jpg";
-        }
-
-        await newUser.save();
-        return res.status(200).json({
-          _id: newUser._id,
-          token: newUser.token,
-          account: { username: newUser.account.username },
-        });
-      } else {
-        res.status(400).json({ message: "Missing parameters" });
-      }
-    } else
-      res
-        .status(409)
+    if (isAccountExist) {
+      return res
+        .status(400)
         .json({ message: "An account using this email already exists" });
+    }
+
+    // Vérification de la présence de tous les paramètres
+    if (!username || !email || !password || newsletter === undefined) {
+      return res.status(400).json({ message: "Missing parameters" });
+    }
+
+    // Déclaration du nouveau compte
+    const newUser = new User({
+      email,
+      account: {
+        username,
+      },
+      newsletter,
+      token,
+      hash,
+      salt,
+    });
+
+    // Enregistrement de l'avatar
+    if (req.files) {
+      try {
+        const result = await cloudinary.uploader.upload(
+          convertToBase64(req.files.avatar),
+          { folder: `vinted/users/${newUser._id}` }
+        );
+
+        newUser.account.avatar.secure_url = result.secure_url;
+        newUser.account.avatar.public_id = result.public_id;
+      } catch (error) {
+        return res.status(500).json({ message: error.message });
+      }
+    } else {
+      // Si pas d'avatar, un avatar par défaut est affecté
+      newUser.account.avatar.secure_url =
+        "https://res.cloudinary.com/dwdykfhtf/image/upload/v1684566311/vinted/default_pictures/default-avatar.jpg";
+      newUser.account.avatar.public_id =
+        "vinted/default_pictures/default-avatar.jpg";
+    }
+
+    await newUser.save();
+    return res.status(200).json({
+      _id: newUser._id,
+      token: newUser.token,
+      account: {
+        username: newUser.account.username,
+        avatar: newUser.account.avatar.secure_url,
+      },
+    });
   } catch (error) {
     return res.status(400).json(error.message);
   }
