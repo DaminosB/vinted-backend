@@ -47,17 +47,13 @@ router.post("/user/signup", fileUpload(), async (req, res) => {
 
     // Enregistrement de l'avatar
     if (req.files) {
-      try {
-        const result = await cloudinary.uploader.upload(
-          convertToBase64(req.files.avatar),
-          { folder: `vinted/users/${newUser._id}` }
-        );
+      const result = await cloudinary.uploader.upload(
+        convertToBase64(req.files.avatar),
+        { folder: `vinted/users/${newUser._id}` }
+      );
 
-        newUser.account.avatar.secure_url = result.secure_url;
-        newUser.account.avatar.public_id = result.public_id;
-      } catch (error) {
-        return res.status(500).json({ message: error.message });
-      }
+      newUser.account.avatar.secure_url = result.secure_url;
+      newUser.account.avatar.public_id = result.public_id;
     } else {
       // Si pas d'avatar, un avatar par défaut est affecté
       newUser.account.avatar.secure_url =
