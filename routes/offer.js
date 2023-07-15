@@ -276,6 +276,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
 
     // Suppression de photos
     if (typeof pictureToDelete === "string") {
+      // Suppression d'une seule photo
       if (numberOfPictures > 1) {
         const indexToDelete = offerToEdit.product_image.findIndex(
           (element) => element.public_id === pictureToDelete
@@ -290,6 +291,7 @@ router.put("/offer/modify", isAuthenticated, fileUpload(), async (req, res) => {
           .json({ message: "Cannot post an offer without picture" });
       }
     } else if (typeof pictureToDelete === "object") {
+      // Suppression de plusieurs photos
       if (numberOfPictures - pictureToDelete.length >= 1) {
         const arrayOfPromises = pictureToDelete.map((picture) => {
           return cloudinary.uploader.destroy(picture);
@@ -382,8 +384,8 @@ router.get("/offers", async (req, res) => {
     const count = await Offer.countDocuments(filters);
     const offers = await Offer.find(filters)
       .sort({ product_price: sort })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      // .skip((page - 1) * limit)
+      // .limit(limit)
       .populate({ path: "owner", select: "account -_id" })
       .select("-__v");
     res.status(200).json({ count, offers });
