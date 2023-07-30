@@ -375,7 +375,7 @@ router.get("/offers", async (req, res) => {
 
     const regexTitle = new RegExp(title, "i");
 
-    const limit = 5;
+    const limit = 10;
 
     const filters = {
       product_name: regexTitle,
