@@ -384,8 +384,8 @@ router.get("/offers", async (req, res) => {
     const count = await Offer.countDocuments(filters);
     const offers = await Offer.find(filters)
       .sort({ product_price: sort })
-      // .skip((page - 1) * limit)
-      // .limit(limit)
+      .skip((page - 1) * limit)
+      .limit(limit)
       .populate({ path: "owner", select: "account -_id" })
       .select("-__v");
     res.status(200).json({ count, offers });
