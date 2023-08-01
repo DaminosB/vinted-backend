@@ -9,6 +9,7 @@ const convertToBase64 = require("../utiles/convertToBase64");
 const router = express.Router();
 
 const User = require("../modeles/User");
+const Offer = require("../modeles/Offer");
 
 router.post("/user/signup", fileUpload(), async (req, res) => {
   try {
@@ -103,7 +104,49 @@ router.post("/user/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
   } catch (error) {
-    res.status(200).json({ message: error.message });
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.get("/user/orders", async (req, res) => {
+  try {
+    // Destructuring de la requête
+    const { token } = req.query;
+
+    const userOnDisplay = await User.findOne({ token });
+
+    const userOrders = await Offer.find({
+      "buyer.buyerID": userOnDisplay._id,
+    })
+      .populate({ path: "owner", select: "-_id" })
+      .select("-__v");
+
+    res
+      .status(200)
+      .json(userOrders.sort((a, b) => b.buyer.date - a.buyer.date));
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.get("/user/offers", async (req, res) => {
+  try {
+    // Destructuring de la requête
+    const { token } = req.query;
+
+    const userOnDisplay = await User.findOne({ token });
+
+    const userOffers = await Offer.find({
+      owner: userOnDisplay._id,
+    });
+
+    console.log(userOffers);
+
+    res
+      .status(200)
+      .json(userOffers.sort((a, b) => b.buyer.date - a.buyer.date));
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 

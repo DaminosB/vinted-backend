@@ -14,7 +14,7 @@ const isAuthenticated = async (req, res, next) => {
     } else {
       res
         .status(401)
-        .json({ message: "You must be connected to edit an offer" });
+        .json({ message: "You must be connected to do this operation" });
     }
   } catch (error) {
     res.status(400).json({ message: error.message });

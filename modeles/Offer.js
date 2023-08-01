@@ -10,6 +10,14 @@ const Offer = mongoose.model("Offer", {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  buyer: {
+    buyerID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    orderPrice: Number,
+    date: Date,
+  },
 });
 
 module.exports = Offer;

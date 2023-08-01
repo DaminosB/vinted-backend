@@ -380,6 +380,7 @@ router.get("/offers", async (req, res) => {
     const filters = {
       product_name: regexTitle,
       product_price: { $gte: priceMin, $lte: priceMax },
+      buyer: undefined,
     };
     const count = await Offer.countDocuments(filters);
     const offers = await Offer.find(filters)
