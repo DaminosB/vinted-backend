@@ -399,7 +399,7 @@ router.get("/offer/:id", async (req, res) => {
   try {
     const offerToDisplay = await Offer.findById(req.params.id).populate({
       path: "owner",
-      select: "account -_id",
+      select: "account ; token -_id",
     });
     if (offerToDisplay) {
       return res.status(200).json(offerToDisplay);
